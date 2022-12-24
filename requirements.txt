@@ -1,0 +1,7 @@
+pandas==1.5.2
+requests==2.28.1
+beautifulsoup4==4.11.1
+gmail-connector>=0.6.0
+Jinja2==3.1.2
+python-dotenv>=0.21.0
+lxml
