@@ -1,15 +1,18 @@
+<h2>{{title}}</h2>
 <table>
     <thead>
     <tr>
-        <th>Type of Mortgage</th>
-        <th>Current Rates</th>
+        <th>Product</th>
+        <th>Interest rate</th>
+        <th>APR</th>
     </tr>
     </thead>
     <tbody>
     {% for key, value in result.items() %}
     <tr>
         <td> {{ key }}</td>
-        <td> {{ value }} </td>
+        <td style="text-align: center"> {{ value.interest_rate }} </td>
+        <td style="text-align: center"> {{ value.apr }} </td>
     </tr>
     {% endfor %}
     </tbody>
