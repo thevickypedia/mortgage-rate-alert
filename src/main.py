@@ -1,11 +1,14 @@
+import os
+from datetime import datetime
+
 import jinja2
 import pandas
 import requests
 from bs4 import BeautifulSoup
 from gmailconnector.send_email import SendEmail
 
-from constants import (LOGGER, SKIP_SCHEDULE, datetime, PRODUCT,
-                       TYPE_OF_RATE, MIN_THRESHOLD, MAX_THRESHOLD)
+from constants import (LOGGER, SKIP_SCHEDULE, PRODUCT,
+                       TYPE_OF_RATE, MIN_THRESHOLD, MAX_THRESHOLD, SYSTEM)
 
 SOURCE_URL = "https://www.nerdwallet.com/mortgages/mortgage-rates"
 
@@ -25,21 +28,34 @@ def trigger():
     html = BeautifulSoup(response.text, "html.parser")
     updated = html.select_one('time').text or ""
     dataframe = pandas.read_html(io=response.text)
-    header = list(dataframe[0].keys())
+    if dataframe and len(dataframe) == 1:
+        dataframe = dataframe[0]
+        dataframe = dataframe.to_dict()
+    else:
+        title = "Mortgage Rate Alert failed to run."
+        message = "Dataframe looks altered, code needs to be refactored."
+        if SYSTEM == "Darwin":
+            os.system(f"""osascript -e 'display notification "{message}" with title "{title}"'""")
+        elif SYSTEM == "Linux":
+            os.system(f"""notify-send -t 0 '{title}' '{message}'""")
+        else:
+            raise LookupError(
+                f"Something is off, code needs to be refactored if there are any changes in {SOURCE_URL!r}"
+            )
 
-    # todo: reduce multiple conversions
-    raw_data = {key: list(value.values) for key, value in dataframe[0].items()}
+    header = list(dataframe.keys())
+    raw_data = {key: list(value.values()) for key, value in dataframe.items()}  # Transpose the dataframe
     dictionary = {}
     for index, element in enumerate(raw_data[header[0]]):
-        dictionary[element] = {header[1]: float(raw_data[header[1]][index].rstrip('%')),
-                               header[2]: float(raw_data[header[2]][index].rstrip('%'))}
+        dictionary[element] = {header[1].lower().replace(' ', '_'): raw_data[header[1]][index],
+                               header[2].lower().replace(' ', '_'): raw_data[header[2]][index]}
 
     if updated.replace("Accurate as of", "").replace(".", "").strip() != datetime.now().strftime("%m/%d/%Y"):
         LOGGER.warning(f"{SOURCE_URL} returned outdated information.")
     else:
         LOGGER.info(updated)
 
-    rate = dictionary[PRODUCT][TYPE_OF_RATE]
+    rate = float(dictionary[PRODUCT][TYPE_OF_RATE.replace(' ', '_').lower()].rstrip('%'))
     msg = f"{TYPE_OF_RATE} for {PRODUCT}: {rate}%"
     LOGGER.info(msg)
 
@@ -59,11 +75,7 @@ def trigger():
     with open('email_template.html') as email_temp:
         template_data = email_temp.read()
 
-    # todo: remove framing new dict and try to accommodate existing
-    rendered = jinja2.Template(template_data).render(
-        result={item[0]: {"interest_rate": item[1], "apr": item[2]} for item in [d.values for d in dataframe][0]},
-        title=msg
-    )
+    rendered = jinja2.Template(template_data).render(result=dictionary, title=msg)
     response = SendEmail().send_email(subject=subject, html_body=rendered, sender="Mortgage Rate Alert")
     if response.ok:
         LOGGER.info(response.body)

@@ -15,6 +15,17 @@ A simple python script to monitor mortgage rates and alert based on threshold
 - **PRODUCT**: Defaults to `30-year fixed-rate`
 - **TYPE_OF_RATE**: Defaults to `Interest rate`
 
+### To run in a container
+```shell
+docker build -t mortgage .
+docker run mortgage
+```
+
+### Sample cron schedule
+```shell
+*/30 * * * * /usr/local/bin/docker run mortgage
+```
+
 ## License & copyright
 
 &copy; Vignesh Rao

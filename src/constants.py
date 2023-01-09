@@ -1,9 +1,12 @@
 import logging
 import os
+import platform
 import warnings
 from datetime import datetime
 
 import dotenv
+
+SYSTEM = platform.system()
 
 dotenv.load_dotenv(dotenv_path=".env")
 
