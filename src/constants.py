@@ -6,8 +6,6 @@ from datetime import datetime
 
 import dotenv
 
-SYSTEM = platform.system()
-
 dotenv.load_dotenv(dotenv_path=".env")
 
 if not os.path.isdir('logs'):
@@ -27,15 +25,10 @@ DEFAULT_LOG_FORMAT = logging.Formatter(
     datefmt='%b-%d-%Y %I:%M:%S %p',
     fmt='%(asctime)s - %(levelname)s - [%(module)s:%(lineno)d] - %(funcName)s - %(message)s'
 )
-FILENAME = datetime.now().strftime(os.path.join('logs', 'jarvis_%d-%m-%Y.log'))
-
-NOTIFICATION = os.path.join(os.getcwd(), 'last_notify.yaml')
-
-LOGGER = logging.getLogger("jarvis")
-
+FILENAME = datetime.now().strftime(os.path.join('logs', 'mortgage_%d-%m-%Y.log'))
+LOGGER = logging.getLogger(__name__)
 HANDLER = logging.FileHandler(filename=FILENAME, mode='a')
 HANDLER.setFormatter(fmt=DEFAULT_LOG_FORMAT)
-
 LOGGER.addHandler(hdlr=HANDLER)
 LOGGER.setLevel(level=logging.INFO)
 
@@ -47,46 +40,61 @@ with open(FILENAME, 'a+') as file:
     else:
         file.write(f"\n{write}\n")
 
-SKIP_SCHEDULE = os.environ.get("SKIP_SCHEDULE", "")
-if SKIP_SCHEDULE:
-    try:
-        datetime.strptime(SKIP_SCHEDULE, "%I:%M %p")  # Validate datetime format
-    except ValueError as error:
-        LOGGER.error(error)
 
-PRODUCT = os.environ.get("PRODUCT", "30-year fixed-rate")
-if PRODUCT not in ('30-year fixed-rate', '20-year fixed-rate', '15-year fixed-rate', '10-year fixed-rate',
-                   '7-year ARM', '5-year ARM', '3-year ARM', '30-year fixed-rate FHA', '30-year fixed-rate VA'):
-    LOGGER.error(f"Invalid type of mortgage {PRODUCT!r}. Defaulting to '30_year_fixed_rate'")
-    PRODUCT = "30-year fixed-rate"
+class Settings:
+    """Wrapper for all env variables."""
 
-TYPE_OF_RATE = os.environ.get("TYPE_OF_RATE", "Interest rate")
-if TYPE_OF_RATE not in ("Interest rate", "APR"):
-    LOGGER.error(f"Invalid type of rate {TYPE_OF_RATE!r}. Defaulting to 'interest_rate'")
-    TYPE_OF_RATE = "Interest rate"
+    source_url = "https://www.nerdwallet.com/mortgages/mortgage-rates"
+    operating_system = platform.system()
+    notification = os.path.join(os.getcwd(), 'last_notify')
+    if os.getcwd().endswith('src'):
+        email_template = 'email_template.html'
+    else:
+        email_template = os.path.join('src', 'email_template.html')
 
-MIN_THRESHOLD = os.environ.get("MIN_THRESHOLD")
-MAX_THRESHOLD = os.environ.get("MAX_THRESHOLD")
+    skip_schedule = os.environ.get("skip_schedule") or os.environ.get("SKIP_SCHEDULE") or ""
+    if skip_schedule:
+        try:
+            datetime.strptime(skip_schedule, "%I:%M %p")  # Validate datetime format
+        except ValueError as error:
+            LOGGER.error(error)
 
-if not MIN_THRESHOLD and not MAX_THRESHOLD:
-    raise ValueError(
-        "either min or max threshold is required. "
-        "refer https://github.com/thevickypedia/mortgage-rate-alert/blob/main/README.md#env-variables"
-    )
+    product = os.environ.get("PRODUCT") or os.environ.get("product") or "30-year fixed-rate"
+    if product not in ('30-year fixed-rate', '20-year fixed-rate', '15-year fixed-rate', '10-year fixed-rate',
+                       '7-year ARM', '5-year ARM', '3-year ARM', '30-year fixed-rate FHA', '30-year fixed-rate VA'):
+        LOGGER.error(f"Invalid type of mortgage {product!r}. Defaulting to '30_year_fixed_rate'")
+        product = "30-year fixed-rate"
 
-if MIN_THRESHOLD and (MIN_THRESHOLD.isdigit() or is_float(MIN_THRESHOLD)):
-    MIN_THRESHOLD = float(MIN_THRESHOLD)
-elif MIN_THRESHOLD:
-    LOGGER.error(f"Invalid minimum threshold {MIN_THRESHOLD!r}. Defaulting to 4.5")
-    MIN_THRESHOLD = 4.5
+    type_of_rate = os.environ.get("TYPE_OF_RATE") or os.environ.get("type_of_rate") or "Interest rate"
+    if type_of_rate not in ("Interest rate", "APR"):
+        LOGGER.error(f"Invalid type of rate {type_of_rate!r}. Defaulting to 'interest_rate'")
+        type_of_rate = "Interest rate"
 
-if MAX_THRESHOLD and (MAX_THRESHOLD.isdigit() or is_float(MAX_THRESHOLD)):
-    MAX_THRESHOLD = float(MAX_THRESHOLD)
-elif MAX_THRESHOLD:
-    LOGGER.error(f"Invalid max threshold {MAX_THRESHOLD!r}. Defaulting to None")
-    MAX_THRESHOLD = None
+    min_threshold = os.environ.get("MIN_THRESHOLD") or os.environ.get("min_threshold")
+    max_threshold = os.environ.get("MAX_THRESHOLD") or os.environ.get("max_threshold")
 
-if MIN_THRESHOLD and MAX_THRESHOLD:
-    warnings.warn(
-        "both minimum and maximum threshold are present. alert will fire only for one of it."
-    )
+    if not min_threshold and not max_threshold:
+        raise ValueError(
+            "either 'min_threshold' or 'max_threshold' is required. "
+            "refer https://github.com/thevickypedia/mortgage-rate-alert/blob/main/README.md#env-variables"
+        )
+
+    if min_threshold and (min_threshold.isdigit() or is_float(min_threshold)):
+        min_threshold = float(min_threshold)
+    elif min_threshold:
+        LOGGER.error(f"Invalid minimum threshold {min_threshold!r}. Defaulting to 4.5")
+        min_threshold = 4.5
+
+    if max_threshold and (max_threshold.isdigit() or is_float(max_threshold)):
+        max_threshold = float(max_threshold)
+    elif max_threshold:
+        LOGGER.error(f"Invalid max threshold {max_threshold!r}. Defaulting to None")
+        max_threshold = None
+
+    if min_threshold and max_threshold:
+        warnings.warn(
+            "both minimum and maximum threshold are present. alert will fire only for one of it."
+        )
+
+
+settings = Settings()
