@@ -10,7 +10,7 @@ import requests
 from bs4 import BeautifulSoup
 from gmailconnector.send_email import SendEmail
 
-from constants import settings, LOGGER
+from src.constants import settings, LOGGER
 
 
 def trigger() -> None:
@@ -73,7 +73,3 @@ def trigger() -> None:
         LOGGER.info(response.body)
     else:
         LOGGER.error(response.json())
-
-
-if __name__ == '__main__':
-    trigger()
