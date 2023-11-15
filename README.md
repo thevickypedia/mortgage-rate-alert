@@ -25,7 +25,7 @@ docker run mortgage
 ```shell
 0 8 * * * /usr/local/bin/docker run mortgage
 ```
-> :warning: Running it more than once a day is redundant and unnecessary, since results update only once a day
+> :warning: Scheduling it to run more than once a day is redundant and unnecessary, since results typically update daily
 
 ## License & copyright
 
