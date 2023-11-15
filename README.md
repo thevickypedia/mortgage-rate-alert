@@ -23,8 +23,9 @@ docker run mortgage
 
 ### Sample cron schedule
 ```shell
-*/30 * * * * /usr/local/bin/docker run mortgage
+0 8 * * * /usr/local/bin/docker run mortgage
 ```
+> :warning: Running it more than once a day is redundant and unnecessary, since results update only once a day
 
 ## License & copyright
 

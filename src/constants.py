@@ -27,7 +27,7 @@ DEFAULT_LOG_FORMAT = logging.Formatter(
 )
 
 log_handler = os.environ.get('LOG_HANDLER', os.environ.get('log_handler', 'file'))
-if log_handler == 'stream':
+if log_handler == 'stream' or os.environ.get('dockerized'):  # No point in logging into files when containerized
     HANDLER = logging.StreamHandler()
 else:
     FILENAME = datetime.now().strftime(os.path.join('logs', 'mortgage_%d-%m-%Y.log'))
@@ -51,18 +51,7 @@ class Settings:
 
     source_url = "https://www.nerdwallet.com/mortgages/mortgage-rates"
     operating_system = platform.system()
-    notification = os.path.join(os.getcwd(), 'last_notify')
-    if os.getcwd().endswith('src'):
-        email_template = 'email_template.html'
-    else:
-        email_template = os.path.join('src', 'email_template.html')
-
-    skip_schedule = os.environ.get("skip_schedule") or os.environ.get("SKIP_SCHEDULE") or ""
-    if skip_schedule:
-        try:
-            datetime.strptime(skip_schedule, "%I:%M %p")  # Validate datetime format
-        except ValueError as error:
-            LOGGER.error(error)
+    email_template = os.path.join('src', 'email_template.html')
 
     product = os.environ.get("PRODUCT") or os.environ.get("product") or "30-year fixed-rate"
     if product not in ('30-year fixed-rate', '20-year fixed-rate', '15-year fixed-rate', '10-year fixed-rate',
@@ -75,10 +64,19 @@ class Settings:
         LOGGER.error(f"Invalid type of rate {type_of_rate!r}. Defaulting to 'interest_rate'")
         type_of_rate = "Interest rate"
 
+    gmail_user = os.environ.get('GMAIL_USER', os.environ.get('gmail_user'))
+    gmail_pass = os.environ.get('GMAIL_PASS', os.environ.get('gmail_pass'))
+    recipient = os.environ.get('RECIPIENT', os.environ.get('recipient'))
+
+    if not all((gmail_user, gmail_pass, recipient)):
+        raise ValueError(
+            "'gmail_user', 'gmail_pass' and 'recipient' are required to trigger notifications"
+        )
+
     min_threshold = os.environ.get("MIN_THRESHOLD") or os.environ.get("min_threshold")
     max_threshold = os.environ.get("MAX_THRESHOLD") or os.environ.get("max_threshold")
 
-    if not min_threshold and not max_threshold:
+    if not any((min_threshold, max_threshold)):
         raise ValueError(
             "either 'min_threshold' or 'max_threshold' is required. "
             "refer https://github.com/thevickypedia/mortgage-rate-alert/blob/main/README.md#env-variables"

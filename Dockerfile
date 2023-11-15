@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 
-ENV LOG_HANDLER="stream"
+ENV dockerized=1
 
 RUN mkdir /opt/mortgage-rate-alert
 COPY . /opt/mortgage-rate-alert
