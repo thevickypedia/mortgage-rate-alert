@@ -1,3 +1,4 @@
+import io
 import os
 import time
 from datetime import datetime
@@ -9,7 +10,7 @@ import requests
 from bs4 import BeautifulSoup
 from gmailconnector.send_email import SendEmail
 
-from src.constants import settings, LOGGER
+from constants import settings, LOGGER
 
 
 def trigger() -> NoReturn:
@@ -27,7 +28,7 @@ def trigger() -> NoReturn:
         return
     html = BeautifulSoup(response.text, "html.parser")
     updated = html.select_one('time').text or ""
-    dataframe = pandas.read_html(io=response.text)
+    dataframe = pandas.read_html(io=io.StringIO(response.text))
     if dataframe and len(dataframe) == 1:
         dataframe = dataframe[0]
         dataframe = dataframe.to_dict()
@@ -83,10 +84,15 @@ def trigger() -> NoReturn:
         template_data = email_temp.read()
 
     rendered = jinja2.Template(template_data).render(result=dictionary, title=msg)
-    response = SendEmail().send_email(subject=subject, html_body=rendered, sender="Mortgage Rate Alert")
+    response = SendEmail().send_email(recipient=os.environ.get('RECIPIENT', os.environ.get('recipient')),
+                                      subject=subject, html_body=rendered, sender="Mortgage Rate Alert")
     if response.ok:
         LOGGER.info(response.body)
         with open(settings.notification, 'w') as file:
             file.write(time.time().__str__())
     else:
         LOGGER.error(response.json())
+
+
+if __name__ == '__main__':
+    trigger()

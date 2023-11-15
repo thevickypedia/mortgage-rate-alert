@@ -25,20 +25,25 @@ DEFAULT_LOG_FORMAT = logging.Formatter(
     datefmt='%b-%d-%Y %I:%M:%S %p',
     fmt='%(asctime)s - %(levelname)s - [%(module)s:%(lineno)d] - %(funcName)s - %(message)s'
 )
-FILENAME = datetime.now().strftime(os.path.join('logs', 'mortgage_%d-%m-%Y.log'))
+
+log_handler = os.environ.get('LOG_HANDLER', os.environ.get('log_handler', 'file'))
+if log_handler == 'stream':
+    HANDLER = logging.StreamHandler()
+else:
+    FILENAME = datetime.now().strftime(os.path.join('logs', 'mortgage_%d-%m-%Y.log'))
+    HANDLER = logging.FileHandler(filename=FILENAME, mode='a')
+    write = ''.join(['*' for _ in range(120)])
+    with open(FILENAME, 'a+') as file:
+        file.seek(0)
+        if not file.read():
+            file.write(f"{write}\n")
+        else:
+            file.write(f"\n{write}\n")
+
 LOGGER = logging.getLogger(__name__)
-HANDLER = logging.FileHandler(filename=FILENAME, mode='a')
 HANDLER.setFormatter(fmt=DEFAULT_LOG_FORMAT)
 LOGGER.addHandler(hdlr=HANDLER)
-LOGGER.setLevel(level=logging.INFO)
-
-write = ''.join(['*' for _ in range(120)])
-with open(FILENAME, 'a+') as file:
-    file.seek(0)
-    if not file.read():
-        file.write(f"{write}\n")
-    else:
-        file.write(f"\n{write}\n")
+LOGGER.setLevel(level=logging.DEBUG)
 
 
 class Settings:
